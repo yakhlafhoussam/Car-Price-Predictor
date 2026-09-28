@@ -212,7 +212,6 @@ Example comparison structure:
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
-      <th></th>
       <th>Model</th>
       <th>RMSE</th>
       <th>MAE</th>
@@ -222,7 +221,6 @@ Example comparison structure:
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
       <td>Linear Regression</td>
       <td>416919.836243</td>
       <td>245797.457538</td>
@@ -230,7 +228,6 @@ Example comparison structure:
       <td>22.198401</td>
     </tr>
     <tr>
-      <th>1</th>
       <td>Random Forest</td>
       <td>253428.836169</td>
       <td>135459.842971</td>
@@ -238,7 +235,6 @@ Example comparison structure:
       <td>71.252806</td>
     </tr>
     <tr>
-      <th>2</th>
       <td>XGBoost</td>
       <td>195290.554733</td>
       <td>112728.500000</td>
@@ -246,7 +242,6 @@ Example comparison structure:
       <td>82.929516</td>
     </tr>
     <tr>
-      <th>3</th>
       <td>SVR</td>
       <td>492122.249271</td>
       <td>285958.914003</td>
@@ -254,7 +249,6 @@ Example comparison structure:
       <td>-8.400031</td>
     </tr>
     <tr>
-      <th>4</th>
       <td>Random Forest - After</td>
       <td>227792.860232</td>
       <td>118951.365986</td>
@@ -262,7 +256,6 @@ Example comparison structure:
       <td>76.774578</td>
     </tr>
     <tr>
-      <th>5</th>
       <td>XGBoost - After</td>
       <td>188476.794540</td>
       <td>106094.617188</td>
