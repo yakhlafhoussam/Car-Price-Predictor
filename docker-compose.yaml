@@ -1,0 +1,9 @@
+services:
+  car-price-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: car-price-predictor
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
