@@ -1,487 +1,438 @@
-# 🚗 Used Car Price Prediction
+# 🚗 Car Price Predictor
 
-A Machine Learning project for predicting the selling price of used cars based on their characteristics.
+> A used-car dataset entered the laboratory. Six regressors were invited to guess what a car is worth. One of them kept getting closer to the truth.
 
-The project covers the complete Machine Learning workflow, from data cleaning and exploratory analysis to model training, hyperparameter tuning, evaluation, comparison, and deployment through a Streamlit application.
+**Car Price Predictor** is an end-to-end machine learning project that investigates used-car prices, compares regression algorithms, and deploys the selected model through an interactive Streamlit application.
+
+The repository brings together data cleaning, exploratory data analysis, feature engineering, model training, hyperparameter tuning, evaluation, and deployment. Rather than treating the prediction as a black box, the project preserves the evidence behind the final model: visualizations, evaluation metrics, and serialized preprocessing and model artifacts.
+
+The experiment's current winner is a tuned **XGBoost Regressor**, achieving an \(R^2\) score of **84.10%** on the notebook's reported test split.
+
+---
+
+## 📌 Table of Contents
+
+- [Project Overview](#-project-overview)
+- [Dataset](#-dataset)
+- [Machine Learning Workflow](#-machine-learning-workflow)
+- [Model Evaluation](#-model-evaluation)
+- [Interactive Prediction App](#-interactive-prediction-app)
+- [Currency Conversion](#-currency-conversion)
+- [Getting Started](#-getting-started)
+- [Docker Deployment](#-docker-deployment)
+- [Reproducing the Experiment](#-reproducing-the-experiment)
+- [Project Structure](#-project-structure)
+- [Technology Stack](#-technology-stack)
+- [Limitations](#-limitations)
+- [Final Verdict](#-final-verdict)
 
 ---
 
-## 📌 Project Overview
+## 🔬 Project Overview
 
-The objective of this project is to build a regression model capable of estimating the selling price of a used car using information such as:
+The goal is to estimate the selling price of a used car from its characteristics and ownership history.
 
-* Car name
-* Manufacturing year
-* Kilometers driven
-* Fuel type
-* Seller type
-* Transmission
-* Owner type
+The project explores the relationship between vehicle attributes and selling prices, then evaluates several regression algorithms to identify the strongest candidate for deployment.
 
-The project focuses not only on obtaining good prediction performance, but also on understanding the dataset, handling missing values and outliers, comparing different algorithms, and selecting a final production model.
+**Key features**
 
----
+- Exploratory data analysis with saved visualizations.
+- Data cleaning, duplicate removal, and missing-value investigation.
+- Feature engineering to represent vehicle age, usage intensity, and ownership history.
+- Categorical encoding and numerical feature scaling.
+- Comparison of six model configurations.
+- Hyperparameter tuning with `GridSearchCV`.
+- Evaluation using RMSE, MAE, and \(R^2\).
+- Interactive price predictions through Streamlit.
+- Docker-based application deployment.
+- Optional display of estimates in multiple currencies.
 
 ## 📊 Dataset
 
-The dataset contains used-car listings with the following columns:
+The project uses a used-car dataset containing **4,340 original listings** and eight original columns.
 
-| Column          | Description                     |
-| --------------- | ------------------------------- |
-| `name`          | Car model/name                  |
-| `year`          | Manufacturing year              |
-| `selling_price` | Selling price — target variable |
-| `km_driven`     | Number of kilometers driven     |
-| `fuel`          | Fuel type                       |
-| `seller_type`   | Type of seller                  |
-| `transmission`  | Transmission type               |
-| `owner`         | Previous owner information      |
+| Feature | Description |
+|---|---|
+| `name` | Vehicle make/model name |
+| `year` | Manufacturing year |
+| `selling_price` | Listed selling price; prediction target |
+| `km_driven` | Distance driven in kilometres |
+| `fuel` | Fuel category |
+| `seller_type` | Individual or dealer category |
+| `transmission` | Manual or automatic transmission |
+| `owner` | Previous-owner category |
 
-### Dataset size
+After duplicate removal, the working dataset contains **3,705 rows**.
 
-Original dataset:
+The target prices are expressed in **Indian rupees (INR)**, consistent with the source dataset. This is an Indian used-car dataset, not a Morocco-specific market dataset.
 
-```text
-4340 rows × 8 columns
-```
+The complete investigation is documented in [`notebooks/exploration.ipynb`](notebooks/exploration.ipynb).
 
-After removing duplicate records:
+## ⚙️ Machine Learning Workflow
 
-```text
-3705 rows × 8 columns
-```
+The notebook follows a reproducible investigation pipeline.
 
----
+### 1. Data inspection and cleaning
 
-## 🔎 Project Workflow
+- Inspect dataset dimensions, data types, and categorical values.
+- Identify missing values and duplicate records.
+- Remove duplicates and investigate incomplete entries.
+- Examine price distributions and potential outliers.
 
-The project follows these main steps:
+### 2. Exploratory data analysis
 
-### 1. Data Understanding
+The analysis investigates price distributions, relationships between vehicle characteristics and selling prices, and correlations between numerical features.
 
-* Load the dataset
-* Inspect dimensions and data types
-* Analyze categorical and numerical features
-* Identify missing values
-* Detect duplicated records
-* Generate descriptive statistics
+The generated visualizations are saved in [`graphs/`](graphs/).
 
-### 2. Data Cleaning
+### 3. Feature engineering
 
-Several preprocessing operations were performed:
+Several additional features are constructed to represent relationships that may influence resale value.
 
-* Removing duplicate rows
-* Handling missing values
-* Converting numerical columns to appropriate types
-* Imputing missing values using contextual/group-based strategies
-* Checking inconsistent values
+| Feature | Definition | Purpose |
+|---|---|---|
+| `car_age` | Reference year − manufacturing year | Represents vehicle age |
+| `km_per_age` | Kilometres driven ÷ car age | Approximates usage intensity |
+| `age_km` | Car age × kilometres driven | Captures an age–usage interaction |
+| `brand` | First two words of the vehicle name | Provides a simplified make/model grouping |
+| `age_owner` | Car age × encoded owner category | Captures an age–ownership interaction |
 
-For example, missing values were handled using information from related features such as:
+Categorical variables such as fuel type, seller type, and brand are one-hot encoded. Transmission and owner categories are converted to numerical representations.
 
-```text
-name
-year
-fuel
-seller_type
-owner
-```
+The numerical `year` and `km_driven` features are standardized using a fitted `StandardScaler`.
 
-rather than relying only on global statistics.
+**Preprocessing consistency matters:** the deployed application must reproduce the training feature definitions, column order, encodings, and scaling. The saved scaler and model must come from the same compatible training run.
 
-### 3. Exploratory Data Analysis
+### 4. Model training and tuning
 
-The dataset was analyzed using different visualizations:
+The experiment compares these six configurations:
 
-* Histograms
-* Box plots
-* Scatter plots
-* Correlation analysis
-* Pair plots
-* Target distribution analysis
+1. Linear Regression
+2. Random Forest
+3. XGBoost
+4. Support Vector Regression (SVR)
+5. Random Forest after hyperparameter tuning
+6. XGBoost after hyperparameter tuning
 
-These visualizations helped identify relationships between car characteristics and selling price.
+`GridSearchCV` is used to tune the Random Forest and XGBoost configurations.
 
-### 4. Outlier Detection
+### 5. Model evaluation
 
-Outliers were investigated using techniques such as:
+The models are evaluated on the reported test split using:
 
-* IQR
-* Z-score
-* Box plots
+- **RMSE:** penalizes larger prediction errors more heavily.
+- **MAE:** measures the average absolute prediction error.
+- **\(R^2\):** measures the proportion of target variation explained by the model relative to a mean-prediction baseline.
 
-Special attention was given to extreme values in:
-
-```text
-selling_price
-km_driven
-```
-
-The goal was to distinguish genuine high-value vehicles from potentially problematic observations.
+Residual analysis and predicted-versus-actual plots provide additional evidence about model behaviour.
 
 ---
 
-## 🤖 Machine Learning Models
+## 🏆 Model Evaluation
 
-Several regression algorithms were trained and evaluated.
+The following results are the recorded outputs from the current notebook. Price-error metrics are expressed in the dataset's original price units (INR).
 
-The project includes models such as:
+| Model | RMSE | MAE | R² |
+|---|---:|---:|---:|
+| Linear Regression | 416,919.84 | 245,797.46 | 0.2220 |
+| Random Forest | 253,428.84 | 135,459.84 | 0.7125 |
+| XGBoost | 195,290.55 | 112,728.50 | 0.8293 |
+| SVR | 492,122.25 | 285,958.91 | -0.0840 |
+| Random Forest — Tuned | 227,792.86 | 118,951.37 | 0.7677 |
+| **XGBoost — Tuned** | **188,476.79** | **106,094.62** | **0.8410** |
 
-* Linear Regression
-* Decision Tree Regressor
-* Random Forest Regressor
-* Gradient Boosting
-* XGBoost
+### Selected model: Tuned XGBoost
 
-Each model was trained using a preprocessing pipeline to ensure consistent data transformation.
+The tuned XGBoost model achieved the strongest overall results in this comparison:
 
----
+- **R²:** 0.8410 (84.10%)
+- **RMSE:** 188,476.79 INR
+- **MAE:** 106,094.62 INR
 
-## ⚙️ Hyperparameter Tuning
+The model has the lowest RMSE and MAE, and the highest \(R^2\), among the configurations listed.
 
-For the most promising models, hyperparameter optimization was performed using `GridSearchCV`.
+An \(R^2\) of 0.8410 does **not** mean that every prediction is 84.10% accurate. It indicates that the model explains approximately 84.10% of the target variation under the reported test evaluation.
 
-### Random Forest
-
-Parameters explored included:
-
-```python
-{
-    "n_estimators": [100, 200, 300],
-    "max_depth": [None, 10, 20, 30],
-    "min_samples_split": [2, 5, 10]
-}
-```
-
-### XGBoost
-
-XGBoost hyperparameters were also optimized to improve the model's performance and generalization.
-
-Cross-validation was used during the tuning process to obtain a more reliable estimate of model performance.
+The saved model is located at `models/xgboost_final.pkl`, with its fitted scaler at `models/scaler.pkl`.
 
 ---
 
-## 📏 Model Evaluation
+## 📈 Evidence Wall
 
-The models were evaluated using three main regression metrics.
+The notebook generates visual evidence to support the analysis and model evaluation.
 
-### RMSE — Root Mean Squared Error
+### Dataset investigation
 
-Measures the average prediction error while giving more weight to large errors.
+**Correlation matrix**
 
-```text
-RMSE = √MSE
-```
+![Correlation matrix](graphs/correlation_matrix.png)
 
-Lower values indicate smaller prediction errors.
+**Manufacturing year vs. selling price**
 
-### MAE — Mean Absolute Error
+![Year versus selling price](graphs/year_vs_selling_price.png)
 
-Measures the average absolute difference between predicted and actual prices.
+**Kilometres driven vs. selling price**
 
-```text
-MAE = mean(|y_true - y_pred|)
-```
+![Kilometres driven versus selling price](graphs/km_driven_vs_selling_price.png)
 
-Lower values are better.
+**Selling-price distribution**
 
-### R² — Coefficient of Determination
+![Selling-price distribution](graphs/distribution_selling_price.png)
 
-Measures how much of the variation in the target variable is explained by the model.
+### Model diagnostics
 
-```text
-R² = 1 - SSres / SStot
-```
+**Tuned XGBoost: predicted vs. actual prices**
 
-A value closer to `1` indicates that the model explains more of the observed variation.
+![Tuned XGBoost predictions](graphs/predictions_vs_actual_xgboost_after.png)
 
----
+**Tuned XGBoost residuals**
 
-## 📈 Model Comparison
+![Tuned XGBoost residuals](graphs/residuals_xgboost_after.png)
 
-The trained models are compared using:
-
-* RMSE
-* MAE
-* R²
-* Prediction vs. actual plots
-* Residual analysis
-
-Example comparison structure:
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th>Model</th>
-      <th>RMSE</th>
-      <th>MAE</th>
-      <th>R²</th>
-      <th>R² (%)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Linear Regression</td>
-      <td>416919.836243</td>
-      <td>245797.457538</td>
-      <td>0.221984</td>
-      <td>22.198401</td>
-    </tr>
-    <tr>
-      <td>Random Forest</td>
-      <td>253428.836169</td>
-      <td>135459.842971</td>
-      <td>0.712528</td>
-      <td>71.252806</td>
-    </tr>
-    <tr>
-      <td>XGBoost</td>
-      <td>195290.554733</td>
-      <td>112728.500000</td>
-      <td>0.829295</td>
-      <td>82.929516</td>
-    </tr>
-    <tr>
-      <td>SVR</td>
-      <td>492122.249271</td>
-      <td>285958.914003</td>
-      <td>-0.084000</td>
-      <td>-8.400031</td>
-    </tr>
-    <tr>
-      <td>Random Forest - After</td>
-      <td>227792.860232</td>
-      <td>118951.365986</td>
-      <td>0.767746</td>
-      <td>76.774578</td>
-    </tr>
-    <tr>
-      <td>XGBoost - After</td>
-      <td>188476.794540</td>
-      <td>106094.617188</td>
-      <td>0.840999</td>
-      <td>84.099925</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-> The final values are generated from the experiments in the notebook.
+Additional distributions, boxplots, and model diagnostics are available in [`graphs/`](graphs/).
 
 ---
 
-## 📉 Prediction Analysis
+## 🖥️ Interactive Prediction App
 
-The project also uses prediction-vs-actual visualizations to understand model behavior.
+The Streamlit application turns the trained model into an interactive interface.
 
-A good regression model should produce predictions close to the diagonal:
+Users can enter vehicle information, generate a price estimate, and choose how the predicted amount is displayed.
 
-```text
-Predicted Price
-       │
-       │       /
-       │     /
-       │   /
-       │ /
-       └──────────── Actual Price
-```
+The interface accepts:
 
-Residual plots are also used to identify systematic errors and unusual predictions.
+- Vehicle brand/model.
+- Manufacturing year.
+- Kilometres driven.
+- Fuel type.
+- Seller type.
+- Transmission.
+- Previous-owner history.
+- Display currency.
 
----
+The app loads the saved artifacts from `models/`. It does not retrain the model when a prediction is requested.
 
-## 🏆 Final Model
+### Run locally
 
-After comparing the different models and tuning the strongest candidates, the selected model is saved for later use by the application.
-
-The trained model is serialized using `joblib`.
-
-Example:
-
-```python
-joblib.dump(model, "models/xgboost_final.pkl")
-```
-
-The application then loads the trained model instead of retraining it every time.
-
----
-
-## 🌐 Streamlit Application
-
-A Streamlit application is included to provide an interactive interface for price prediction.
-
-The user can enter information such as:
-
-* Car model
-* Manufacturing year
-* Kilometers driven
-* Fuel type
-* Seller type
-* Transmission
-* Owner type
-
-The application processes the input and returns an estimated selling price.
-
-### Run the application
-
-From the project root:
+After installing the dependencies, launch the application:
 
 ```bash
-streamlit run app/app.py
+streamlit run app.py
 ```
 
----
-
-## 📁 Project Structure
-
-```text
-Car-Price-Predictor/
-│
-├── app/
-│   └── app.py
-│
-├── data/
-│   └── car-price.csv 
-│
-├── models/
-│   └── xgboost_final.pkl
-│
-├── notebooks/
-│   └── exploration.ipynb
-│
-├── requirements.txt
-│
-└── README.md
-```
-
-The exact model files may vary depending on the final experiment.
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ---
 
-## 🛠️ Technologies
+## 💱 Currency Conversion
 
-### Programming Language
+The underlying model predicts prices in **Indian rupees (INR)** because that is the currency used by the training dataset.
 
-* Python
+The application can display an estimate in other currencies, such as:
 
-### Data Processing
+- INR — Indian Rupee
+- MAD — Moroccan Dirham
+- USD — US Dollar
+- EUR — Euro
+- GBP — British Pound
 
-* Pandas
-* NumPy
+When fixed exchange rates are configured in `app.py`, the conversion is a presentation step applied to the model's INR prediction. It does not retrain the model or change the predicted vehicle value in the original dataset's market.
 
-### Data Visualization
+**Important:** if the application uses fixed exchange-rate values, they are illustrative and can become outdated. They should not be presented as live financial rates.
 
-* Matplotlib
-* Seaborn
-
-### Machine Learning
-
-* Scikit-learn
-* XGBoost
-
-### Model Serialization
-
-* Joblib
-
-### Application
-
-* Streamlit
-
-### Development
-
-* Jupyter Notebook
-* VS Code
-* Python Virtual Environment
+Currency conversion also does not make the model a reliable Moroccan-market valuation tool. Local taxes, vehicle availability, import costs, demand, and market pricing are not learned from this dataset.
 
 ---
 
-## 📦 Installation
+## 🚀 Getting Started
 
-Clone the repository:
+### Prerequisites
+
+- Python 3.10 or newer, compatible with your installed dependencies.
+- Git.
+- The project repository and its model artifacts.
+
+Docker is optional if you prefer containerized deployment.
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/yakhlafhoussam/Car-Price-Predictor.git
-cd brief-2
+cd Car-Price-Predictor
 ```
 
-Create a virtual environment:
+### 2. Create a virtual environment
 
 ```bash
 python -m venv .venv
 ```
 
-Activate it on Linux:
+Activate it on Linux or macOS:
 
 ```bash
 source .venv/bin/activate
 ```
 
-Install the dependencies:
+On Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+### 3. Install dependencies
 
 ```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
----
+### 4. Verify the required artifacts
 
-## 🚀 Run the Project
+Ensure these files exist:
 
-### Run the notebook
-
-Open the notebook using Jupyter or VS Code and execute the cells in order.
-
-### Run the Streamlit application
-
-```bash
-streamlit run app/app.py
+```text
+models/
+├── scaler.pkl
+└── xgboost_final.pkl
 ```
 
----
+Both artifacts must be compatible with the features generated by `app.py`.
 
-## 🎯 Project Objectives
+### 5. Launch the application
 
-This project was developed to practice the complete Machine Learning workflow:
+```bash
+streamlit run app.py
+```
 
-* Understand and clean real-world data
-* Handle missing values
-* Detect and analyze outliers
-* Perform exploratory data analysis
-* Prepare features for Machine Learning
-* Train multiple regression models
-* Optimize model hyperparameters
-* Compare model performance
-* Analyze prediction errors
-* Save a production-ready model
-* Build an interactive prediction application
+Navigate to [http://localhost:8501](http://localhost:8501).
 
 ---
 
-## 🔮 Possible Improvements
+## 🐳 Docker Deployment
 
-Future improvements could include:
+The repository includes a Dockerfile and a Compose configuration for running the prediction app in a container.
 
-* Collecting a larger and more recent dataset
-* Adding additional vehicle features
-* Advanced feature engineering
-* More extensive hyperparameter optimization
-* Cross-validation analysis
-* Explainable AI using SHAP
-* Model monitoring
-* Deploying the Streamlit application online
-* Adding prediction confidence or price ranges
+### Build and start
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:8501](http://localhost:8501).
+
+### Run in the background
+
+```bash
+docker compose up --build -d
+```
+
+### View logs
+
+```bash
+docker compose logs -f car-price-predictor
+```
+
+### Stop the application
+
+```bash
+docker compose down
+```
+
+The container exposes port `8501` and runs the Streamlit server on `0.0.0.0`, allowing the host machine to access the application.
+
+If dependencies fail to install during the image build, check network connectivity and package compatibility, then retry the build.
 
 ---
 
-## 👨‍💻 Author
+## 🔁 Reproducing the Experiment
 
-**Houssam YAKHLAF**
+To reproduce the investigation:
 
-Machine Learning / Full Stack Web Development Student
+1. Clone the repository and activate a Python virtual environment.
+2. Install the dependencies from `requirements.txt`.
+3. Open `notebooks/exploration.ipynb` in Jupyter Notebook or VS Code.
+4. Execute the notebook cells in order.
+5. Review the generated analysis and diagnostic plots.
+6. Train and evaluate the candidate models.
+7. Save the selected model and its matching fitted scaler.
+8. Launch the Streamlit app and compare predictions against the recorded evaluation results.
 
-Morocco
+The notebook should be treated as the source of truth for the reported metrics. Re-running the experiment can produce different results if the dataset, random seed, reference year, feature engineering, dependency versions, or train/test split changes.
 
 ---
 
-## 📄 License
+## 🗂️ Project Structure
 
-This project was developed for educational purposes as part of a Machine Learning project.
+```text
+Car-Price-Predictor/
+├── app.py
+├── data/
+│   └── car-price.csv
+├── graphs/
+│   ├── correlation_matrix.png
+│   ├── year_vs_selling_price.png
+│   ├── km_driven_vs_selling_price.png
+│   ├── distribution_selling_price.png
+│   ├── predictions_vs_actual_xgboost_after.png
+│   └── residuals_xgboost_after.png
+├── models/
+│   ├── scaler.pkl
+│   └── xgboost_final.pkl
+├── notebooks/
+│   └── exploration.ipynb
+├── Dockerfile
+├── docker-compose.yaml
+├── requirements.txt
+└── README.md
+```
+
+*The tree illustrates the expected project layout; individual graph files may differ depending on the notebook outputs. The actual Compose filename should match the file committed to the repository.*
+
+---
+
+## 🧰 Technology Stack
+
+| Technology | Role |
+|---|---|
+| Python | Core programming language |
+| Pandas | Data manipulation and cleaning |
+| NumPy | Numerical operations |
+| Matplotlib | Visualization |
+| Seaborn | Statistical plots |
+| Scikit-learn | Preprocessing, evaluation, model selection, and baseline models |
+| XGBoost | Final gradient-boosting regressor |
+| Joblib | Model and scaler serialization |
+| Jupyter Notebook | Experimentation and documentation |
+| Streamlit | Interactive web interface |
+| Docker | Containerized deployment |
+| Docker Compose | Local container orchestration |
+
+---
+
+## ⚠️ Limitations and Considerations
+
+- **Market scope:** the dataset reflects Indian used-car listings. Predictions should not be interpreted as direct estimates of Moroccan market prices.
+- **Currency:** the model predicts INR-denominated prices. Currency conversion changes the displayed amount, not the underlying market context.
+- **Model uncertainty:** even the best model makes errors. An estimate is not a guaranteed selling price or a professional vehicle appraisal.
+- **Temporal effects:** vehicle prices and market conditions change over time. The reference year used in feature engineering must remain consistent with training.
+- **Feature compatibility:** the app's preprocessing must exactly match the training pipeline. An incompatible model or scaler can produce incorrect predictions or runtime errors.
+- **Data quality:** outliers, unobserved vehicle condition, regional demand, accident history, and other missing factors may affect prices.
+- **Evaluation scope:** the reported scores apply to the notebook's test split and do not establish performance on every market or future dataset.
+
+Serialized model files should only be loaded from trusted sources. Pickle-based artifacts can execute code during deserialization.
+
+---
+
+## 🧪 Final Verdict
+
+The investigation began with 4,340 listings and a straightforward question: can a machine learn to estimate what a used car is worth?
+
+After cleaning, feature engineering, model comparison, and hyperparameter tuning, XGBoost emerged as the strongest candidate in the reported experiment.
+
+With an \(R^2\) of 0.8410 and an MAE of 106,094.62 INR, it earned its place in the prediction interface—not because it never gets the answer wrong, but because its results were strongest among the models tested.
+
+**The verdict:** the best model is not the one that sounds convincing. It is the one whose predictions survive evaluation.
+
+---
+
+*Built as a machine-learning investigation into used-car price prediction, from exploratory analysis to a containerized interactive application.*
