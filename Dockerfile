@@ -7,13 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt .
-
-RUN python -m pip install \
-    --no-cache-dir \
-    --retries 10 \
-    --timeout 120 \
-    --progress-bar off \
-    -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 COPY models/ ./models/
