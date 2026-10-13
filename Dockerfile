@@ -11,7 +11,6 @@ COPY requirements.txt .
 RUN python -m pip install \
     --no-cache-dir \
     --retries 10 \
-    --resume-retries 10 \
     --timeout 120 \
     --progress-bar off \
     -r requirements.txt
